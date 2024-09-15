@@ -11,6 +11,7 @@ namespace APIBuilderSetup;
 public partial class Form1 : MaterialForm
 {
     private const string DEVELOPER_BRANCH_NAME = "dev";
+    private const string MASTER_BRANCH_NAME = "master";
     private readonly Log logger;
     public Form1()
     {
@@ -142,23 +143,43 @@ public partial class Form1 : MaterialForm
         return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
     }
 
-    private void CreateIfMissing(string path, string cloneUrl)
+    private void CreateIfMissing(string path, string cloneUrl, bool branchToBeCreated = true)
     {
         if (!Directory.Exists(path))
         {
             logger.Append("Creating directory -  " + path + "", Log.Type.Info, Color.Black);
             Directory.CreateDirectory(path);
-            CreateBranch(DEVELOPER_BRANCH_NAME);
+            // create the branch only for target repository.. not for template repository
+            if (branchToBeCreated)
+            {
+                CreateBranch(DEVELOPER_BRANCH_NAME);
+            }
             CloneRepo(cloneUrl, path, txtUserName.Text + lblDomain.Text, txtAccessToken.Text);
             Pull(path, txtUserName.Text + lblDomain.Text, txtAccessToken.Text);
-            Checkout(path, DEVELOPER_BRANCH_NAME);
+            if (branchToBeCreated)
+            {
+                Checkout(path, DEVELOPER_BRANCH_NAME);
+            }
+            else
+            {
+                // for template repository, there wont be any dev branch. so checkout the master branch
+                Checkout(path, MASTER_BRANCH_NAME);
+            }
         }
         else
         {
             logger.Append("Selected project already cloned  " + path + "", Log.Type.Info, Color.Black);
             richTextBox1.Refresh();
             Pull(path, txtUserName.Text + lblDomain.Text, txtAccessToken.Text);
-            Checkout(path, DEVELOPER_BRANCH_NAME);
+            if (branchToBeCreated)
+            {
+                Checkout(path, DEVELOPER_BRANCH_NAME);
+            }
+            else
+            {
+                // for template repository, there wont be any dev branch. so checkout the master branch
+                Checkout(path, MASTER_BRANCH_NAME);
+            }
         }
     }
     private bool DevBranchExist()
@@ -467,7 +488,7 @@ public partial class Form1 : MaterialForm
             {
                 Cursor.Current = Cursors.WaitCursor;
                 var exePath = Path.GetDirectoryName(Application.ExecutablePath) + "\\ApiBuilderProjects\\";
-                //CreateIfMissing(exePath + ddlTemplateRepo.Text, ((GitCloneModel)ddlTemplateRepo.SelectedItem).CloneUrl);
+                CreateIfMissing(exePath + ddlTemplateRepo.Text, ((GitCloneModel)ddlTemplateRepo.SelectedItem).CloneUrl, false);
                 CreateIfMissing(exePath + ddlTargetRepo.Text, ((GitCloneModel)ddlTargetRepo.SelectedItem).CloneUrl);
                 Cursor.Current = Cursors.Default;
                 OpenFileSelecitonWindow();
