@@ -143,15 +143,21 @@ public partial class SelectFiles : Form
             node.Checked = isChecked;
         }
     }
-
+    private bool CheckIfPathIsDirectory(string path)
+    {
+        var exePath = Path.GetDirectoryName(Application.ExecutablePath) + "\\ApiBuilderProjects\\";
+        FileAttributes attr = File.GetAttributes(exePath + path);
+        //detect whether its a directory or file
+        if ((attr & FileAttributes.Directory) == FileAttributes.Directory)
+            return true;
+        return false;
+    }
     public void PrintNodesRecursive(TreeNode oParentNode)
     {
         bool isRoot = false;
         if (oParentNode.Nodes.Count > 0 && !string.IsNullOrEmpty(oParentNode.Name) && oParentNode.Checked)
         {
-            if (folder != null)
-                SelectedFiles.Add(folder);
-            else
+            if (folder == null)
                 isRoot = true;
 
             folder = new()
@@ -161,15 +167,19 @@ public partial class SelectFiles : Form
                 FullPath = oParentNode.FullPath,
                 CreateSubFolder = (oParentNode.Name != "trigger" && oParentNode.Name != "service" && oParentNode.Name != "Jenkinsfile" && !oParentNode.Name.Contains('.'))
             };
+            SelectedFiles.Add(folder);
         }
         else if (!string.IsNullOrEmpty(oParentNode.Name) && oParentNode.Checked)
         {
-            folder.Files ??= [];
-            folder.Files.Add(new()
+            if (folder != null)
             {
-                Name = oParentNode.Name,
-                FullPath = oParentNode.FullPath
-            });
+                folder.Files ??= [];
+                folder.Files.Add(new()
+                {
+                    Name = oParentNode.Name,
+                    FullPath = oParentNode.FullPath
+                });
+            }
         }
         foreach (TreeNode oSubNode in oParentNode.Nodes)
         {

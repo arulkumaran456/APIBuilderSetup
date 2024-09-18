@@ -74,7 +74,8 @@ public partial class Form1 : MaterialForm
             using (var repo = new Repository(localRepoPath))
             {
                 var signature = repo.Config.BuildSignature(DateTimeOffset.Now);
-                var result = Commands.Pull(repo, signature, options);
+                Signature sig = new Signature(userName, userName, DateTime.Now);
+                var result = Commands.Pull(repo, sig, options);
                 if (result.Status == MergeStatus.Conflicts)
                 {
                     logger.Append("Conflict detected " + localRepoPath + "", Log.Type.Info, Color.Red);
@@ -297,10 +298,10 @@ public partial class Form1 : MaterialForm
     }
     private void Form1_Load(object sender, EventArgs e)
     {
-        txtUserName.Text = "arulkumar.ponnusamy.ext";
+        txtUserName.Text = "";
         txtUserName.BackColor = Color.White;
         txtAccessToken.BackColor = Color.White;
-        txtAccessToken.Text = "Cutebrain@123456789";
+        txtAccessToken.Text = "";
         ddlProject.BackColor = Color.White;
         ddlTargetRepo.BackColor = Color.White;
         ddlTemplateRepo.BackColor = Color.White;
@@ -312,6 +313,7 @@ public partial class Form1 : MaterialForm
 
     private void CopyFiles(List<FolderNode>? files)
     {
+        string? multiSubFolderPath = null;
         foreach (var item in files)
         {
             var exePath = Path.GetDirectoryName(Application.ExecutablePath) + "\\ApiBuilderProjects\\";
@@ -336,21 +338,33 @@ public partial class Form1 : MaterialForm
                     logger.Append("Creating folder " + targetPath, Log.Type.Info, Color.Black);
                     Directory.CreateDirectory(targetPath);
                 }
-                foreach (var file in item.Files)
+                if (item.CreateSubFolder && item.Files == null)
                 {
-                    if (item.CreateSubFolder)
+                    multiSubFolderPath += item.Name + "\\";
+                }
+                else
+                {
+                    foreach (var file in item.Files)
                     {
-                        targetPath = exePath + ddlTargetRepo.Text + "\\docker\\dist\\" + item.Name;
-                        if (!Directory.Exists(targetPath))
+                        if (item.CreateSubFolder)
                         {
-                            logger.Append("Creating sub folder " + targetPath, Log.Type.Info, Color.Black);
-                            Directory.CreateDirectory(targetPath);
+                            if (multiSubFolderPath != null)
+                                targetPath = exePath + ddlTargetRepo.Text + "\\docker\\dist\\" + multiSubFolderPath + item.Name;
+                            else
+                                targetPath = exePath + ddlTargetRepo.Text + "\\docker\\dist\\" + item.Name;
+
+                            if (!Directory.Exists(targetPath))
+                            {
+                                logger.Append("Creating sub folder " + targetPath, Log.Type.Info, Color.Black);
+                                Directory.CreateDirectory(targetPath);
+                            }
                         }
+                        string sourceFile = Path.Combine(sourcePath, file.Name);
+                        string destFile = Path.Combine(targetPath, file.Name);
+                        System.IO.File.Copy(sourceFile, destFile, true);
+                        logger.Append("Copying file " + file.Name + " from " + sourceFile + " to " + destFile, Log.Type.Info, Color.Black);
                     }
-                    string sourceFile = Path.Combine(sourcePath, file.Name);
-                    string destFile = Path.Combine(targetPath, file.Name);
-                    System.IO.File.Copy(sourceFile, destFile, true);
-                    logger.Append("Copying file " + file.Name + " from " + sourceFile + " to " + destFile, Log.Type.Info, Color.Black);
+                    multiSubFolderPath = null;
                 }
             }
         }
